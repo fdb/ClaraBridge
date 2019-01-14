@@ -1,76 +1,118 @@
 import React, { Component } from 'react';
+import EngagorStore from "./EngagorStore";
 import './App.css';
 
-
-const ReplyItem=(props)=>{
-  return(
-          <nav className="mainNav">
-              <div>
-                  <h5>{props.item.message}</h5>
-              </div>
-              
-          </nav>
-      
-        )
-}
+const ReplyItem = props => {
+  return (
+    <nav className="mainNav">
+      <div>
+        <h5>{props.item.message}</h5>
+        <p>Sentiment score: { props.item.sentiment }</p>
+        <hr />
+      </div>
+    </nav>
+  );
+};
 
 class App extends Component {
-  constructor(props){
-    super(props)
-      this.state={
-        myReplies:[],
-        repliesMessage:[]
-      }   
+  constructor(props) {
+    super(props);
+    this.state = {
+      replies: [],
+      loading: true,
+      searching: ""
+    };
   }
- 
-encodeParams(params) {
-    return Object.entries(params).map(([k, v]) => `${k}=${encodeURI(v)}`).join('&')
-  }
-componentDidMount=()=>{
-  
-  fetch ('https://cors.io/?https://api.engagor.com/17966/settings/canned_responses/?access_token=e88f6c1657533d781c62bd619acb77c1')
-      .then(response=>{return response.json()
-        })
-      .then(myJason=>{this.setState({
-          myReplies:myJason.response.data
-          })
-        })
-        //Save All of the messages in an Array
-        .then(()=>{
-          let x=[]
-          this.state.myReplies.map(item=>x.push(item.message))
-          this.setState({repliesMessage:x})
-        })
-        .then(async ()=> {
-          const params = {
-            access_token: 'e88f6c1657533d781c62bd619acb77c1', 
-            string: '["send the email again","give me some cakes"]',
-            //string: encodeURIComponent(this.state.repliesMessage),
-           // string: this.state.repliesMessage,
-            language: 'en'
-          }
-          console.log(params.string)
-          console.log(this.state.repliesMessage)
-          const res = await fetch(`https://cors.io/?https://api.engagor.com/tools/sentiment/?`+ this.encodeParams(params),{
-            "Content-Type": "application/x-www-form-urlencoded",
-          });
-          const json = await res.json();
-          console.log(`Result: ${json.response}`)
-        })
-   
-}
-  render() {
-    const reply =this.state.myReplies.map((item)=>{
-      return(
-            <ReplyItem key={item.id} item={item}/>
-            )
-    })
 
-      return (
-        <div className="">
-        <ul>{reply}</ul>
-        </div>
-    )
+  // encodeParams(params) {
+  //   return Object.entries(params).map(([k, v]) => `${k}=${encodeURI(v)}`).join('&')
+  // }
+  // const params = {
+  //   access_token: 'e88f6c1657533d781c62bd619acb77c1',
+  //   string: 'nice and lovely cat',
+  //   language: 'en'
+  // }
+
+  getResults = async () => {
+    let string = ["bad ass", " fine and lovely", "excellent,i dont care"];
+    const res = await fetch(
+      `https://cors.io/?https://api.engagor.com/tools/sentiment/?access_token=e88f6c1657533d781c62bd619acb77c1&string=${string}&language=en`,
+      {
+        // mode:'no-cors'
+      }
+    );
+    const json = await res.json();
+    console.log(`Result: ${json.response}`);
+  };
+
+  componentDidMount = async () => {
+    const responses = await EngagorStore.getCannedResponses();
+    console.log(responses);
+    const messages = responses.map(r => r.message);
+    const sentiments = await EngagorStore.getSentiment(messages);
+    const replies = responses.map((r, i) => ({ ...r, sentiment: sentiments[i]}));
+    console.log(replies);
+    this.setState({ loading: false, replies });
+    // fetch(
+    //   "https://cors.io/?https://api.engagor.com/17966/settings/canned_responses/?access_token=e88f6c1657533d781c62bd619acb77c1"
+    // )
+    //   .then(response => {
+    //     return response.json();
+    //   })
+    //   .then(myJason => {
+    //     this.setState({
+    //       myReplies: myJason.response.data
+    //     });
+    //   });
+  };
+
+// componentDidMount=()=>{
+
+//   fetch ('https://cors.io/?https://api.engagor.com/17966/settings/canned_responses/?access_token=e88f6c1657533d781c62bd619acb77c1')
+//       .then(response=>{return response.json()
+//         })
+//       .then(myJason=>{this.setState({
+//           myReplies:myJason.response.data
+//           })
+//         })
+//         //Save All of the messages in an Array
+//         .then(()=>{
+//           let x=[]
+//           this.state.myReplies.map(item=>x.push(item.message))
+//           this.setState({repliesMessage:x})
+//         })
+//         .then(async ()=> {
+//           const params = {
+//             access_token: 'e88f6c1657533d781c62bd619acb77c1',
+//             string: '["send the email again","give me some cakes"]',
+//             //string: encodeURIComponent(this.state.repliesMessage),
+//            // string: this.state.repliesMessage,
+//             language: 'en'
+//           }
+//           console.log(params.string)
+//           console.log(this.state.repliesMessage)
+//           const res = await fetch(`https://cors.io/?https://api.engagor.com/tools/sentiment/?`+ this.encodeParams(params),{
+//             "Content-Type": "application/x-www-form-urlencoded",
+//           });
+//           const json = await res.json();
+//           console.log(`Result: ${json.response}`)
+//         })
+
+// }
+  render() {
+    if (this.state.loading) { return <p>Loading....</p> }
+    const replies = this.state.replies.map(item => {
+      return <ReplyItem key={item.id} item={item} />;
+    });
+
+    return (
+      <div className="">
+        {/* <input type='text' onChange={this.serachMovie}></input> */}
+        {/* <button onClick={this.getData}>click Me</button> */}
+        <ul>{replies}</ul>
+        <button onClick={this.getResults}>string</button>
+      </div>
+    );
   }
 }
 
